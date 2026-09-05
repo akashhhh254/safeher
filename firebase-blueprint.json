@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "EmergencyContact": {
+      "title": "EmergencyContact",
+      "description": "Trusted emergency contact information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "relationship": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "isPrimary": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "name", "phone"]
+    },
+    "Journey": {
+      "title": "Journey",
+      "description": "Recorded safe journey session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "originName": { "type": "string" },
+        "destinationName": { "type": "string" },
+        "originCoords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "destinationCoords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "distanceKm": { "type": "number" },
+        "durationMinutes": { "type": "number" },
+        "safetyScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "completed", "cancelled", "sos_triggered"] },
+        "safeCheckIntervalMinutes": { "type": "number" },
+        "checkInsCount": { "type": "number" },
+        "startedAt": { "type": "string" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["userId", "originName", "destinationName", "status", "startedAt"]
+    },
+    "CommunityReport": {
+      "title": "CommunityReport",
+      "description": "Geotagged community safety hazard report",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Poor Lighting",
+            "Harassment",
+            "Isolated Area",
+            "Suspicious Activity",
+            "Construction/Road Issue",
+            "Stray Animals",
+            "Other Safety Concern"
+          ]
+        },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "address": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "resolved"] },
+        "upvotes": { "type": "number" }
+      },
+      "required": ["category", "title", "location", "authorUid", "createdAt", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profile"
+    },
+    "/users/{userId}/emergencyContacts/{contactId}": {
+      "schema": "EmergencyContact",
+      "description": "User trusted emergency contacts"
+    },
+    "/users/{userId}/journeys/{journeyId}": {
+      "schema": "Journey",
+      "description": "User journey records"
+    },
+    "/communityReports/{reportId}": {
+      "schema": "CommunityReport",
+      "description": "Public community hazard reports"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, MapPin, ShieldCheck, Clock } from 'lucide-react';
+import { X, Calendar, MapPin, ShieldCheck, Clock, Navigation } from 'lucide-react';
 import { ActiveJourney } from '../types';
 
 interface HistoryModalProps {
@@ -18,14 +18,15 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white w-full max-w-lg rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
         <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/30">
               <Calendar className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Journey History & Logs</h2>
-              <p className="text-xs text-slate-400">Past protected routes, check-ins, and safety ratings</p>
+              <h2 className="text-lg font-bold">Journey Logs</h2>
+              <p className="text-xs text-slate-400">Past protected routes & completed safety checks</p>
             </div>
           </div>
           <button
@@ -36,11 +37,15 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           </button>
         </div>
 
+        {/* Content */}
         <div className="p-5 overflow-y-auto space-y-3">
           {pastJourneys.length === 0 ? (
-            <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              <p className="text-xs text-slate-500 font-medium">No recorded journeys yet.</p>
-              <p className="text-[11px] text-slate-400 mt-1">Start a safe navigation journey to track records here.</p>
+            <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 px-4">
+              <Navigation className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-700">No recorded journeys yet.</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                When you start and complete a safe route with SafeCheck, your journey history will be securely logged here.
+              </p>
             </div>
           ) : (
             pastJourneys.map((j) => (
@@ -55,7 +60,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                       <span>{j.destinationName}</span>
                     </h4>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      {new Date(j.startedAt).toLocaleDateString()} • {new Date(j.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(j.startedAt).toLocaleDateString()} •{' '}
+                      {new Date(j.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                   <div className="text-right">
@@ -82,10 +88,11 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           )}
         </div>
 
+        {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl"
+            className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-colors"
           >
             Close
           </button>

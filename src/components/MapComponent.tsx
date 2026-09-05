@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { RouteAlternative, CommunityReport, SafetyPOI } from '../types';
-import { Shield, AlertTriangle, Crosshair, MapPin } from 'lucide-react';
 
 interface MapComponentProps {
   userLocation: [number, number];
@@ -64,7 +63,6 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   // Update center when userLocation changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-    // Pan smoothly
     mapInstanceRef.current.panTo(userLocation, { animate: true, duration: 0.8 });
   }, [userLocation]);
 
@@ -79,7 +77,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     polyGroup.clearLayers();
     markerGroup.clearLayers();
 
-    // 1. User Marker (Glowing Indigo Ripple)
+    // 1. User Marker (Indigo Pulse)
     const userIcon = L.divIcon({
       className: 'custom-user-marker',
       html: `
@@ -94,7 +92,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     });
     L.marker(userLocation, { icon: userIcon })
       .addTo(markerGroup)
-      .bindPopup('<b>Current Location</b><br/>GPS Accuracy Verified');
+      .bindPopup('<b>Starting / Current Point</b>');
 
     // 2. Destination Marker
     if (destinationLocation) {
@@ -118,7 +116,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         .bindPopup('<b>Destination Point</b>');
     }
 
-    // 3. Community Hazard Reports
+    // 3. Real Community Hazard Reports
     reports.forEach((rep) => {
       const isHarassment = rep.category === 'harassment';
       const isLighting = rep.category === 'poor_lighting';
@@ -148,25 +146,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         `);
     });
 
-    // 4. Safety POIs (Police, Hospitals)
-    safetyPOIs.forEach((poi) => {
-      const isPolice = poi.type === 'police';
-      const poiIcon = L.divIcon({
-        className: 'custom-poi-marker',
-        html: `
-          <div class="w-6 h-6 ${isPolice ? 'bg-blue-600' : 'bg-emerald-600'} text-white rounded-full flex items-center justify-center shadow-md border-2 border-white">
-            <span class="text-[10px] font-black">${isPolice ? 'P' : 'H'}</span>
-          </div>
-        `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-      });
-      L.marker(poi.location, { icon: poiIcon })
-        .addTo(markerGroup)
-        .bindPopup(`<b>${poi.name}</b><br/><span class="text-xs text-slate-500">${isPolice ? 'Police Facility' : 'Medical Hospital'}</span>`);
-    });
-
-    // 5. Draw Routes
+    // 4. Draw Routes
     const bounds = L.latLngBounds([userLocation]);
     if (destinationLocation) bounds.extend(destinationLocation);
 
@@ -190,11 +170,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       });
     });
 
-    // Fit map bounds smoothly if multiple points exist
+    // Fit map bounds smoothly if destination exists
     if (routes.length > 0 || destinationLocation) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
     }
-  }, [userLocation, destinationLocation, routes, selectedRouteIndex, reports, safetyPOIs]);
+  }, [userLocation, destinationLocation, routes, selectedRouteIndex, reports]);
 
   const selectedRoute = routes[selectedRouteIndex];
 
@@ -216,11 +196,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       : 'text-red-600';
 
   return (
-    <div className="flex-1 bg-slate-100 rounded-[24px] md:rounded-[32px] border-4 border-white shadow-xl relative overflow-hidden flex flex-col min-h-[420px] md:min-h-[520px]">
+    <div className="flex-1 bg-slate-100 rounded-[24px] md:rounded-[32px] border-4 border-white shadow-xl relative overflow-hidden flex flex-col min-h-[400px] md:min-h-[520px]">
       {/* Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* Floating Bento HUD Elements */}
+      {/* Floating HUD Elements */}
       <div className="absolute inset-0 p-4 md:p-6 flex flex-col justify-between pointer-events-none z-10">
         {/* Top Badges */}
         <div className="flex justify-between items-start gap-2">
@@ -235,28 +215,24 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             </div>
           </div>
 
-          {/* Environmental Safety Snapshot Card */}
-          <div className="bg-white/95 backdrop-blur p-2.5 sm:p-3 rounded-xl shadow-lg border border-slate-100 flex flex-col gap-1.5 pointer-events-auto">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-              <span className="text-[10px] font-bold text-slate-600 uppercase">Emergency Support: 0.4km</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-indigo-500 rounded-full" />
-              <span className="text-[10px] font-bold text-slate-600 uppercase">Live Community Clearance</span>
-            </div>
+          {/* Location status badge */}
+          <div className="bg-white/95 backdrop-blur px-3 py-2 rounded-xl shadow-lg border border-slate-100 pointer-events-auto text-right">
+            <p className="text-[9px] font-black text-slate-400 uppercase">Interactive Map</p>
+            <p className="text-xs font-bold text-slate-800">
+              {destinationLocation ? `${routes.length} Safe Route${routes.length === 1 ? '' : 's'}` : 'Select destination'}
+            </p>
           </div>
         </div>
 
         {/* Center Prompt when no route selected */}
-        {routes.length === 0 && (
-          <div className="self-center bg-white/90 backdrop-blur px-5 py-3 rounded-2xl shadow-md border border-slate-200 pointer-events-auto text-center">
-            <p className="text-xs font-bold text-slate-700">Enter a destination to compare safe routes</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Calculates lighting, public activity, and community safety</p>
+        {routes.length === 0 && !destinationLocation && (
+          <div className="self-center bg-white/95 backdrop-blur px-5 py-3 rounded-2xl shadow-md border border-slate-200 pointer-events-auto text-center max-w-sm">
+            <p className="text-xs font-bold text-slate-800">Search an Indian destination to compare safe routes</p>
+            <p className="text-[11px] text-slate-500 mt-1">Evaluates thoroughfares, lighting, and community safety reports</p>
           </div>
         )}
 
-        {/* Bottom Floating Stats Pill (Exact Bento Grid Theme) */}
+        {/* Bottom Floating Stats Pill */}
         {selectedRoute && (
           <div className="flex justify-center pointer-events-auto">
             <div className="bg-white/95 backdrop-blur px-5 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-xl border border-white flex items-center gap-4 sm:gap-6">
@@ -271,9 +247,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
               </div>
               <div className="h-6 w-[1px] bg-slate-200" />
               <div className="text-center">
-                <p className="text-[9px] uppercase font-bold text-slate-400">Risk Level</p>
+                <p className="text-[9px] uppercase font-bold text-slate-400">Safety</p>
                 <p className={`text-xs sm:text-sm font-black uppercase ${riskBadgeClass}`}>
-                  {selectedRoute.safety.riskLevel}
+                  {selectedRoute.safety.compositeSafetyScore}%
                 </p>
               </div>
             </div>

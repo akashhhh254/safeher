@@ -72,10 +72,19 @@ STRICT ACCURACY RULES:
 4. Tone: Calm, supportive, professional, empowering.
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+      });
+    } catch (modelErr: any) {
+      console.warn('Retrying with gemini-3.6-flash:', modelErr?.message || modelErr);
+      response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: prompt,
+      });
+    }
 
     const text = response.text?.trim() || `${route.name} provides an optimal safety profile with ${route.safety.compositeSafetyScore}/100 safety score and reliable commercial activity.`;
     res.json({ explanation: text });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, MapPin, Send } from 'lucide-react';
+import { X, AlertTriangle, MapPin, Send, MessageSquare } from 'lucide-react';
 import { CommunityReport, ReportCategory } from '../types';
 
 interface CommunityReportModalProps {
@@ -7,6 +7,8 @@ interface CommunityReportModalProps {
   onClose: () => void;
   userLocation: [number, number];
   onSubmitReport: (report: Omit<CommunityReport, 'id' | 'createdAt' | 'upvotes' | 'status'>) => void;
+  isLoggedIn: boolean;
+  onPromptLogin?: () => void;
 }
 
 export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
@@ -14,6 +16,8 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
   onClose,
   userLocation,
   onSubmitReport,
+  isLoggedIn,
+  onPromptLogin,
 }) => {
   const [category, setCategory] = useState<ReportCategory>('poor_lighting');
   const [title, setTitle] = useState('');
@@ -23,12 +27,12 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
 
   const categories: { id: ReportCategory; label: string; icon: string }[] = [
     { id: 'poor_lighting', label: 'Poor Lighting', icon: '💡' },
-    { id: 'harassment', label: 'Harassment Concern', icon: '⚠️' },
+    { id: 'harassment', label: 'Harassment / Eve-teasing', icon: '⚠️' },
     { id: 'isolated_area', label: 'Isolated / Desolate Area', icon: '🏚️' },
-    { id: 'suspicious_activity', label: 'Suspicious Activity', icon: '👁️' },
-    { id: 'road_issue', label: 'Road / Construction Hazard', icon: '🚧' },
+    { id: 'suspicious_activity', label: 'Suspicious Loitering', icon: '👁️' },
+    { id: 'road_issue', label: 'Road Obstacle / Construction', icon: '🚧' },
     { id: 'stray_animals', label: 'Aggressive Stray Animals', icon: '🐕' },
-    { id: 'other', label: 'Other Safety Concern', icon: '🛡️' },
+    { id: 'other', label: 'Other Safety Hazard', icon: '🛡️' },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,7 +44,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
       title: title.trim(),
       description: description.trim(),
       location: userLocation,
-      address: `Near GPS (${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)})`,
+      address: `Geo-tagged at (${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)})`,
     });
 
     setTitle('');
@@ -51,14 +55,15 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white w-full max-w-md rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
         <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-amber-500/20 text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/30">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Submit Safety Report</h2>
-              <p className="text-xs text-slate-400">Help protect your fellow community navigators</p>
+              <h2 className="text-lg font-bold">Report Safety Concern</h2>
+              <p className="text-xs text-slate-400">Help protect fellow women traveling this route</p>
             </div>
           </div>
           <button
@@ -69,11 +74,27 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
           </button>
         </div>
 
+        {/* Content */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
+          {!isLoggedIn && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
+              <span>Sign in to link verified reports with your account.</span>
+              {onPromptLogin && (
+                <button
+                  type="button"
+                  onClick={onPromptLogin}
+                  className="text-xs font-bold text-indigo-600 underline ml-2 shrink-0"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Location notice */}
-          <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
             <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>Pin will be geo-tagged at your current GPS coordinates ({userLocation[0].toFixed(4)}, {userLocation[1].toFixed(4)})</span>
+            <span>Pin will be placed at your active coordinates ({userLocation[0].toFixed(4)}, {userLocation[1].toFixed(4)})</span>
           </div>
 
           {/* Category selection */}
@@ -103,14 +124,14 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
           {/* Report Title */}
           <div>
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
-              Subject / Hazard Title
+              Hazard / Concern Title
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Broken streetlamps along northern walkway"
+              placeholder="e.g. Non-working streetlights on metro exit road"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -125,7 +146,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the environment, visibility, or safety hazard observed..."
+              placeholder="Explain the hazard, lighting conditions, or environmental factors observed..."
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
             />
           </div>

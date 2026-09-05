@@ -27,6 +27,7 @@ export function calculateRouteSafety(
     isMainArtery?: boolean;
     hasFootway?: boolean;
     nearbyFacilitiesCount?: number;
+    profile?: string;
   }
 ): RouteSafetyBreakdown {
   const hour = new Date().getHours();

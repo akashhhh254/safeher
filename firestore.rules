@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User profile: strict owner isolation
+    match /users/{userId} {
+      allow get, write: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      // Emergency contacts sub-collection: strictly private to the user
+      match /emergencyContacts/{contactId} {
+        allow read, write: if isOwner(userId) && isValidId(userId);
+      }
+
+      // Journeys sub-collection: strictly private to the user
+      match /journeys/{journeyId} {
+        allow read, write: if isOwner(userId) && isValidId(userId);
+      }
+    }
+
+    // Community reports: publicly readable so all women traveling in the area see hazards
+    match /communityReports/{reportId} {
+      allow read: if true;
+      allow create: if isSignedIn() 
+        && isValidId(reportId)
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.category is string
+        && request.resource.data.title is string
+        && request.resource.data.location.lat is number
+        && request.resource.data.location.lng is number;
+      allow update: if isSignedIn() && (
+        // Author can edit their own report
+        request.auth.uid == resource.data.authorUid ||
+        // Other authenticated users can upvote/corroborate
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes'])
+      );
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.authorUid;
+    }
+  }
+}
