@@ -39,6 +39,64 @@ app.get('/api/auth/config', (req, res) => {
   });
 });
 
+// In-memory OTP storage for secure email and SMS phone verification
+const activeOtps = new Map<string, { code: string; expiresAt: number; attempts: number }>();
+
+app.post('/api/auth/otp/send', (req, res) => {
+  const { target, type } = req.body;
+  if (!target || typeof target !== 'string') {
+    return res.status(400).json({ error: 'Target email or phone is required' });
+  }
+  const cleanTarget = target.trim().toLowerCase();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  activeOtps.set(cleanTarget, {
+    code,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    attempts: 0,
+  });
+
+  console.log(`[SafeHer Security] 6-digit OTP dispatched for ${type || 'account'} [${cleanTarget}]: ${code}`);
+  return res.json({
+    success: true,
+    message: `Security OTP sent to ${target}`,
+    code, // Included for realistic simulated SMS/Email inbox delivery
+    expiresInSeconds: 600,
+  });
+});
+
+app.post('/api/auth/otp/verify', (req, res) => {
+  const { target, code } = req.body;
+  if (!target || !code) {
+    return res.status(400).json({ error: 'Target and verification code are required' });
+  }
+  const cleanTarget = target.trim().toLowerCase();
+  const entry = activeOtps.get(cleanTarget);
+  if (!entry) {
+    return res.status(400).json({ error: 'No active OTP request found. Please request a new code.' });
+  }
+  if (Date.now() > entry.expiresAt) {
+    activeOtps.delete(cleanTarget);
+    return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+  }
+  if (entry.code !== String(code).trim()) {
+    entry.attempts += 1;
+    if (entry.attempts >= 5) {
+      activeOtps.delete(cleanTarget);
+      return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new code.' });
+    }
+    return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+  }
+
+  activeOtps.delete(cleanTarget);
+  return res.json({
+    success: true,
+    verified: true,
+    verifiedTarget: cleanTarget,
+    token: `SH-AUTH-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+  });
+});
+
+
 // Firebase Auth Reverse Proxy to support custom domain authentication flows (/__/auth/*)
 app.all(['/__/auth', '/__/auth/*'], async (req, res) => {
   try {

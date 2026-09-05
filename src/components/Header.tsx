@@ -10,6 +10,7 @@ interface HeaderProps {
   isLoggedIn: boolean;
   userName?: string;
   isJourneyActive: boolean;
+  onShowLanding?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,7 +22,9 @@ export const Header: React.FC<HeaderProps> = ({
   isLoggedIn,
   userName,
   isJourneyActive,
+  onShowLanding,
 }) => {
+
   return (
     <header className="flex justify-between items-center bg-white p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm mb-4 md:mb-6">
       {/* Brand */}
@@ -91,8 +94,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {onShowLanding && (
+          <button
+            onClick={onShowLanding}
+            className="text-xs font-bold text-slate-500 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors hidden sm:block cursor-pointer"
+            title="View About SafeHer & Safety Guide"
+          >
+            About
+          </button>
+        )}
+
         {/* SOS Emergency Broadcast */}
         <button
+
           onClick={onTriggerSOS}
           className="bg-red-50 text-red-600 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-black border border-red-200 hover:bg-red-100 hover:border-red-300 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
           title="Emergency SOS Broadcast (112 / Contacts)"

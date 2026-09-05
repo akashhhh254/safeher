@@ -80,3 +80,12 @@ export interface SafetyPOI {
   location: [number, number];
   distanceKm: number;
 }
+
+export interface SavedAccount {
+  id: string;
+  type: 'email' | 'phone';
+  identifier: string; // email address or phone number
+  displayName: string;
+  lastLoginAt: number;
+}
+

@@ -373,6 +373,7 @@ export default function App() {
     await signOut(auth);
     setPastJourneys([]);
     setContacts([]);
+    setShowLanding(true);
   };
 
   // SafeCheck countdown format
@@ -385,18 +386,32 @@ export default function App() {
     return (
       <>
         <LandingPage
+          isLoggedIn={Boolean(currentUser)}
           onGetStarted={() => {
-            setShowLanding(false);
+            if (currentUser) {
+              setShowLanding(false);
+            } else {
+              setIsAuthModalOpen(true);
+            }
           }}
           onSignIn={() => {
             setIsAuthModalOpen(true);
           }}
-          onLearnMore={() => setShowLanding(false)}
+          onLearnMore={() => {
+            if (currentUser) {
+              setShowLanding(false);
+            } else {
+              setIsAuthModalOpen(true);
+            }
+          }}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
-          onSuccess={() => setIsAuthModalOpen(false)}
+          onSuccess={() => {
+            setIsAuthModalOpen(false);
+            setShowLanding(false);
+          }}
         />
       </>
     );
@@ -416,7 +431,9 @@ export default function App() {
         isLoggedIn={Boolean(currentUser)}
         userName={currentUser?.displayName || undefined}
         isJourneyActive={Boolean(activeJourney && activeJourney.status === 'active')}
+        onShowLanding={() => setShowLanding(true)}
       />
+
 
       {/* Main Tab Views */}
       <main className="flex-1 flex flex-col">
