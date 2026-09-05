@@ -1,0 +1,6 @@
+{
+  "name": "SafeHer",
+  "description": "AI-powered safety-aware navigation and journey protection web application for women.",
+  "requestFramePermissions": ["geolocation", "notifications"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
