@@ -45,15 +45,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
               <User className="w-4 h-4 text-indigo-600" />
-              <span>{user?.displayName || 'Registered User'}</span>
+              <span>{user?.displayName || (user?.isAnonymous ? 'Guest Traveler' : 'SafeHer User')}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <Mail className="w-4 h-4 text-slate-400" />
-              <span>{user?.email || 'No email attached'}</span>
+              <span>{user?.email || (user?.isAnonymous ? 'Guest Session (Synced to device UID)' : 'No email attached')}</span>
             </div>
             <div className="pt-2 flex items-center gap-2 text-[11px] text-emerald-700 font-semibold">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Verified Firebase Session</span>
+              <span>{user?.isAnonymous ? 'Active Firebase Guest Session' : 'Verified Firebase Account'}</span>
             </div>
           </div>
 

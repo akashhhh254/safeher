@@ -3,8 +3,29 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+/**
+ * Resolves the authorized domain for Firebase Authentication:
+ * Default to the project's official Firebase domain (gen-lang-client-0841274382.firebaseapp.com)
+ * which has the registered Google OAuth 2.0 handler and redirect URIs.
+ */
+export function getAuthorizedAuthDomain(): string {
+  const envAuthDomain = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN;
+  if (envAuthDomain && typeof envAuthDomain === 'string' && envAuthDomain.trim().length > 0) {
+    return envAuthDomain.trim();
+  }
+
+  return firebaseConfig.authDomain || 'gen-lang-client-0841274382.firebaseapp.com';
+}
+
+export const resolvedAuthDomain = getAuthorizedAuthDomain();
+
+export const activeFirebaseConfig = {
+  ...firebaseConfig,
+  authDomain: resolvedAuthDomain,
+};
+
 // Initialize Firebase App
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app = getApps().length === 0 ? initializeApp(activeFirebaseConfig) : getApp();
 
 // Authentication
 export const auth = getAuth(app);

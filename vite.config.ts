@@ -4,7 +4,14 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
+  const appUrl = process.env.APP_URL || '';
+  const authDomain = process.env.VITE_FIREBASE_AUTH_DOMAIN || 'gen-lang-client-0841274382.firebaseapp.com';
+
   return {
+    define: {
+      'import.meta.env.VITE_APP_URL': JSON.stringify(appUrl),
+      'import.meta.env.VITE_FIREBASE_AUTH_DOMAIN': JSON.stringify(authDomain),
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

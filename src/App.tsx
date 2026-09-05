@@ -387,9 +387,9 @@ export default function App() {
         <LandingPage
           onGetStarted={() => {
             setShowLanding(false);
-            if (!currentUser) {
-              setIsAuthModalOpen(true);
-            }
+          }}
+          onSignIn={() => {
+            setIsAuthModalOpen(true);
           }}
           onLearnMore={() => setShowLanding(false)}
         />

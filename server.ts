@@ -30,6 +30,45 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'SafeHer API', time: new Date().toISOString() });
 });
 
+// Dynamic Auth Config Info
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    host: req.get('host'),
+    appUrl: process.env.APP_URL || null,
+    defaultAuthDomain: 'gen-lang-client-0841274382.firebaseapp.com',
+  });
+});
+
+// Firebase Auth Reverse Proxy to support custom domain authentication flows (/__/auth/*)
+app.all(['/__/auth', '/__/auth/*'], async (req, res) => {
+  try {
+    const targetUrl = `https://gen-lang-client-0841274382.firebaseapp.com${req.originalUrl}`;
+    const headers = new Headers();
+    for (const [key, val] of Object.entries(req.headers)) {
+      if (key.toLowerCase() !== 'host' && typeof val === 'string') {
+        headers.set(key, val);
+      }
+    }
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
+    });
+
+    res.status(response.status);
+    response.headers.forEach((val, key) => {
+      if (key.toLowerCase() !== 'content-encoding') {
+        res.setHeader(key, val);
+      }
+    });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    res.send(buffer);
+  } catch (err) {
+    console.error('Firebase Auth Proxy error:', err);
+    res.status(502).send('Firebase Auth Gateway Error');
+  }
+});
+
 // Grounded Route Safety Explanation Endpoint
 app.post('/api/gemini/explain-route', async (req, res) => {
   const { route, allRoutes, destinationName } = req.body;

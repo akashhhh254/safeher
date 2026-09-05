@@ -16,9 +16,10 @@ import {
 interface LandingPageProps {
   onGetStarted: () => void;
   onLearnMore: () => void;
+  onSignIn?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnMore }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnMore, onSignIn }) => {
   const scrollToFeatures = () => {
     const el = document.getElementById('how-it-works-section');
     if (el) {
@@ -45,13 +46,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnM
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={scrollToFeatures}
-              className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition-colors hidden sm:block"
+              className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition-colors hidden sm:block cursor-pointer"
             >
               How It Works
             </button>
+            {onSignIn && (
+              <button
+                onClick={onSignIn}
+                className="text-xs sm:text-sm font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+              >
+                Sign In
+              </button>
+            )}
             <button
               onClick={onGetStarted}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black tracking-wide shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
