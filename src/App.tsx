@@ -37,6 +37,7 @@ import { DestinationSearch } from './components/DestinationSearch';
 import { RouteCard } from './components/RouteCard';
 import { BentoMetricsRow } from './components/BentoMetricsRow';
 import { AuthModal } from './components/AuthModal';
+import { AuthPage } from './components/AuthPage';
 import { ProfileModal } from './components/ProfileModal';
 import { SOSModal } from './components/SOSModal';
 import { SafeCheckPromptModal } from './components/SafeCheckPromptModal';
@@ -58,7 +59,8 @@ const INDIA_CENTER: [number, number] = [21.1458, 79.0882];
 
 export default function App() {
   // Navigation & View State
-  const [showLanding, setShowLanding] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<'landing' | 'auth' | 'app'>('landing');
+  const [authInitialMode, setAuthInitialMode] = useState<'signin' | 'register'>('signin');
   const [currentTab, setCurrentTab] = useState<'navigate' | 'reports' | 'contacts' | 'history'>('navigate');
 
   // Firebase Auth State
@@ -373,7 +375,7 @@ export default function App() {
     await signOut(auth);
     setPastJourneys([]);
     setContacts([]);
-    setShowLanding(true);
+    setViewMode('auth');
   };
 
   // SafeCheck countdown format
@@ -381,39 +383,43 @@ export default function App() {
   const countdownSec = secondsRemaining % 60;
   const countdownStr = `${countdownMin}:${countdownSec < 10 ? `0${countdownSec}` : countdownSec}`;
 
-  // If user is viewing the landing page
-  if (showLanding) {
+  // Dedicated Auth Web Page
+  if (viewMode === 'auth') {
     return (
-      <>
-        <LandingPage
-          isLoggedIn={Boolean(currentUser)}
-          onGetStarted={() => {
-            if (currentUser) {
-              setShowLanding(false);
-            } else {
-              setIsAuthModalOpen(true);
-            }
-          }}
-          onSignIn={() => {
-            setIsAuthModalOpen(true);
-          }}
-          onLearnMore={() => {
-            if (currentUser) {
-              setShowLanding(false);
-            } else {
-              setIsAuthModalOpen(true);
-            }
-          }}
-        />
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          onSuccess={() => {
-            setIsAuthModalOpen(false);
-            setShowLanding(false);
-          }}
-        />
-      </>
+      <AuthPage
+        initialMode={authInitialMode}
+        onSuccess={() => setViewMode('app')}
+        onBackToHome={() => setViewMode('landing')}
+      />
+    );
+  }
+
+  // Landing Page View
+  if (viewMode === 'landing') {
+    return (
+      <LandingPage
+        isLoggedIn={Boolean(currentUser)}
+        onGetStarted={() => {
+          if (currentUser) {
+            setViewMode('app');
+          } else {
+            setAuthInitialMode('register');
+            setViewMode('auth');
+          }
+        }}
+        onSignIn={() => {
+          setAuthInitialMode('signin');
+          setViewMode('auth');
+        }}
+        onLearnMore={() => {
+          if (currentUser) {
+            setViewMode('app');
+          } else {
+            setAuthInitialMode('signin');
+            setViewMode('auth');
+          }
+        }}
+      />
     );
   }
 
@@ -427,11 +433,14 @@ export default function App() {
         onSelectTab={setCurrentTab}
         onTriggerSOS={() => setIsSOSModalOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={() => {
+          setAuthInitialMode('signin');
+          setViewMode('auth');
+        }}
         isLoggedIn={Boolean(currentUser)}
         userName={currentUser?.displayName || undefined}
         isJourneyActive={Boolean(activeJourney && activeJourney.status === 'active')}
-        onShowLanding={() => setShowLanding(true)}
+        onShowLanding={() => setViewMode('landing')}
       />
 
 

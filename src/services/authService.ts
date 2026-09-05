@@ -1,201 +1,122 @@
 import {
+  signInWithPopup,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  sendPasswordResetEmail,
   signInAnonymously,
+  User,
 } from 'firebase/auth';
-import { auth } from './firebase';
-import { SavedAccount } from '../types';
+import { auth, googleProvider } from './firebase';
 
-const SAVED_ACCOUNTS_KEY = 'safeher_saved_accounts';
-const DEFAULT_ACCOUNT: SavedAccount = {
-  id: 'akashthakare157@gmail.com',
-  type: 'email',
-  identifier: 'akashthakare157@gmail.com',
-  displayName: 'Akash Thakare',
-  lastLoginAt: Date.now(),
-};
-
-/**
- * Retrieve all previously used / saved accounts from localStorage.
- */
-export function getSavedAccounts(): SavedAccount[] {
-  try {
-    const raw = localStorage.getItem(SAVED_ACCOUNTS_KEY);
-    if (!raw) {
-      // Initialize with default account for convenience
-      localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify([DEFAULT_ACCOUNT]));
-      return [DEFAULT_ACCOUNT];
-    }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
-    }
-    return [DEFAULT_ACCOUNT];
-  } catch (err) {
-    console.warn('Failed to parse saved accounts:', err);
-    return [DEFAULT_ACCOUNT];
-  }
+export interface AuthSuccessResult {
+  user: User;
+  provider: 'google' | 'password' | 'demo';
 }
 
 /**
- * Save or update an account in the local registry
+ * Sign in using official Google OAuth popup
  */
-export function saveAccount(account: Omit<SavedAccount, 'lastLoginAt'>): void {
-  try {
-    const list = getSavedAccounts();
-    const existingIndex = list.findIndex((a) => a.identifier.toLowerCase() === account.identifier.toLowerCase());
-    const updatedAccount: SavedAccount = {
-      ...account,
-      lastLoginAt: Date.now(),
-    };
-
-    if (existingIndex >= 0) {
-      list[existingIndex] = updatedAccount;
-    } else {
-      list.unshift(updatedAccount);
-    }
-    localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(list));
-  } catch (err) {
-    console.warn('Failed to save account:', err);
-  }
-}
-
-/**
- * Remove an account from saved accounts
- */
-export function removeSavedAccount(identifier: string): SavedAccount[] {
-  try {
-    const list = getSavedAccounts().filter((a) => a.identifier.toLowerCase() !== identifier.toLowerCase());
-    localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(list));
-    return list;
-  } catch (err) {
-    console.warn('Failed to remove account:', err);
-    return [];
-  }
-}
-
-/**
- * Dispatches an OTP to an Email or Mobile Phone
- */
-export async function requestOtp(
-  target: string,
-  type: 'email' | 'phone'
-): Promise<{ success: boolean; message: string; code?: string }> {
-  try {
-    const res = await fetch('/api/auth/otp/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: target.trim(), type }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data;
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.error || 'Failed to send OTP code');
-  } catch (err: any) {
-    // Client-side secure fallback generator if network proxy error
-    const localCode = Math.floor(100000 + Math.random() * 900000).toString();
-    console.info(`[SafeHer Client Auth] Fallback OTP for ${target}: ${localCode}`);
-    sessionStorage.setItem(`safeher_otp_${target.trim().toLowerCase()}`, localCode);
-    return {
-      success: true,
-      message: `Security OTP sent to ${target}`,
-      code: localCode,
-    };
-  }
-}
-
-/**
- * Verifies the 6-digit OTP code
- */
-export async function verifyOtpCode(
-  target: string,
-  code: string
-): Promise<{ success: boolean; message?: string }> {
-  const cleanTarget = target.trim().toLowerCase();
-  const cleanCode = code.trim();
-
-  try {
-    const res = await fetch('/api/auth/otp/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: cleanTarget, code: cleanCode }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return { success: Boolean(data.verified) };
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.error || 'Invalid OTP code');
-  } catch (err: any) {
-    // Check fallback session storage
-    const storedCode = sessionStorage.getItem(`safeher_otp_${cleanTarget}`);
-    if (storedCode && storedCode === cleanCode) {
-      sessionStorage.removeItem(`safeher_otp_${cleanTarget}`);
-      return { success: true };
-    }
-    return { success: false, message: err.message || 'Invalid or expired OTP code' };
-  }
-}
-
-/**
- * Log in to Firebase Auth using verified OTP credentials
- * Creates or updates the authentic Firebase user session so Firestore and user-scoped data work seamlessly.
- */
-export async function loginWithVerifiedCredentials(
-  identifier: string,
-  type: 'email' | 'phone',
-  userDisplayName?: string
-): Promise<void> {
-  const cleanIdentifier = identifier.trim().toLowerCase();
-  
-  // Construct a deterministic, secure email format for Firebase
-  const targetEmail =
-    type === 'email'
-      ? cleanIdentifier
-      : `phone_${cleanIdentifier.replace(/[^0-9]/g, '')}@safeher.internal`;
-
-  // Standard secure deterministic salt for OTP-verified accounts
-  const secureSalt = `SH_Sec_2026_${targetEmail.split('@')[0]}!`;
-  const nameToUse =
-    userDisplayName?.trim() ||
-    (type === 'email' ? cleanIdentifier.split('@')[0] : `User (${cleanIdentifier})`);
-
-  try {
-    // Try signing in
-    const cred = await signInWithEmailAndPassword(auth, targetEmail, secureSalt);
-    if (userDisplayName && cred.user) {
-      await updateProfile(cred.user, { displayName: nameToUse });
-    }
-  } catch (err: any) {
-    if (
-      err.code === 'auth/user-not-found' ||
-      err.code === 'auth/invalid-credential' ||
-      err.code === 'auth/wrong-password'
-    ) {
-      try {
-        // Create account
-        const cred = await createUserWithEmailAndPassword(auth, targetEmail, secureSalt);
-        await updateProfile(cred.user, { displayName: nameToUse });
-      } catch (createErr: any) {
-        console.warn('Account creation fallback with anonymous session:', createErr);
-        const anonCred = await signInAnonymously(auth);
-        await updateProfile(anonCred.user, { displayName: nameToUse });
-      }
-    } else {
-      // Anonymous authenticated session with user profile tags
-      const anonCred = await signInAnonymously(auth);
-      await updateProfile(anonCred.user, { displayName: nameToUse });
-    }
-  }
-
-  // Register into saved accounts list
-  saveAccount({
-    id: cleanIdentifier,
-    type,
-    identifier: cleanIdentifier,
-    displayName: nameToUse,
+export async function signInWithGoogle(): Promise<User> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: 'select_account',
   });
+
+  try {
+    const cred = await signInWithPopup(auth, provider);
+    return cred.user;
+  } catch (err: any) {
+    console.error('Google Sign-In error:', err);
+    throw err;
+  }
+}
+
+/**
+ * Sign in with standard Email and Password
+ */
+export async function signInWithEmail(email: string, password: string): Promise<User> {
+  const cleanEmail = email.trim();
+  const cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
+  return cred.user;
+}
+
+/**
+ * Register a new user with Name, Email, and Password
+ */
+export async function registerWithEmail(
+  name: string,
+  email: string,
+  password: string
+): Promise<User> {
+  const cleanEmail = email.trim();
+  const cleanName = name.trim();
+  const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+  if (cleanName && cred.user) {
+    await updateProfile(cred.user, { displayName: cleanName });
+  }
+  return cred.user;
+}
+
+/**
+ * Send password reset email
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const cleanEmail = email.trim();
+  await sendPasswordResetEmail(auth, cleanEmail);
+}
+
+/**
+ * Instant 1-Click Demo Sign-in for immediate client demonstrations
+ */
+export async function signInDemoAccount(
+  displayName = 'Akash Thakare',
+  email = 'akashthakare157@gmail.com'
+): Promise<User> {
+  try {
+    // Try sign in with deterministic demo credential or anonymous
+    const cred = await signInAnonymously(auth);
+    await updateProfile(cred.user, {
+      displayName: displayName,
+    });
+    return cred.user;
+  } catch (err) {
+    console.warn('Anonymous demo fallback error:', err);
+    throw err;
+  }
+}
+
+/**
+ * Helper to translate Firebase Auth errors into clear, friendly messages
+ */
+export function getFriendlyAuthErrorMessage(err: any): string {
+  if (!err) return 'An unexpected error occurred. Please try again.';
+  const code = err.code || '';
+
+  switch (code) {
+    case 'auth/popup-blocked':
+      return 'Google sign-in popup was blocked by your browser. Please allow popups for this site, or sign in using email & password.';
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in was closed before completing. Please try again.';
+    case 'auth/cancelled-popup-request':
+      return 'Previous sign-in popup was closed. Please click Continue with Google again.';
+    case 'auth/unauthorized-domain':
+      return 'Domain authorization pending in Google Cloud. You can sign in using Email & Password or 1-Click Client Demo.';
+    case 'auth/user-not-found':
+      return 'No account found with this email. Please switch to the "Register" tab to create one.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Incorrect email or password. Please verify and try again.';
+    case 'auth/email-already-in-use':
+      return 'This email is already registered. Please switch to "Sign In" or reset your password.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/network-request-failed':
+      return 'Network connection error. Please check your internet connection.';
+    default:
+      return err.message || 'Authentication failed. Please check your credentials and try again.';
+  }
 }
